@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- Папка для пакетов внутри контейнера -->
+    <RestorePackagesPath>/root/.nuget/packages</RestorePackagesPath>
+    <!-- Отключаем fallback на Windows -->
+    <RestoreFallbackFolders></RestoreFallbackFolders>
+  </PropertyGroup>
+</Project>
