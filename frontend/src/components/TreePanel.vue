@@ -1,13 +1,33 @@
 <template>
-  <aside class="sidebar">
-    <div class="tree">
+  <aside
+    class="sidebar"
+    :style="{ width: sidebarWidth + 'px' }"
+  >
+    <div class="resize-handle" @mousedown.stop.prevent="startResizeHandle"></div>
+
+    <div v-if="!collapsed" class="tree">
       <h3>Универсальный редактор</h3>
-      <ul>
-        <li v-for="item in items" :key="item.key" @click="$emit('select', item.key)">
+
+      <div v-if="loading" class="loading">Загрузка...</div>
+      <div v-else-if="error" class="error">Ошибка: {{ error }}</div>
+      <ul v-else>
+        <li
+          v-for="item in items"
+          :key="item.key"
+          @click="$emit('select', item.key)"
+        >
           <span class="dot"></span>{{ item.title }}
         </li>
       </ul>
     </div>
+
+    <div v-else class="collapsed-label" @click="toggleCollapsed">
+      ▶
+    </div>
+
+    <button class="collapse-btn" @click="toggleCollapsed">
+      {{ collapsed ? '⯈' : '⯇' }}
+    </button>
   </aside>
 </template>
 
@@ -74,36 +94,54 @@ onMounted(fetchMenu);
 
 <style scoped>
 .sidebar {
-  width: 280px;
-  background: #f6f8fa;
-  border-right: 1px solid #ddd;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  border-right: 1px solid #ccc;
+  background: #f7f7f7;
+  overflow: hidden;
+  transition: width 0.2s ease;
 }
 
 .tree {
-  padding: 12px;
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
 }
 
-.tree ul {
-  list-style: none;
-  padding: 0;
+.resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  cursor: ew-resize;
+  height: 100%;
+  background: transparent;
 }
 
-.tree li {
+.collapse-btn {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  border: none;
+  background: #ddd;
+  border-radius: 4px;
   cursor: pointer;
-  padding: 6px 8px;
+  width: 24px;
+  height: 24px;
 }
 
-.tree li:hover {
-  background: #e5e9f0;
+.loading,
+.error {
+  padding: 8px;
+  color: #666;
 }
 
-.dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  background: #444;
-  border-radius: 50%;
-  margin-right: 6px;
+.collapsed-label {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  cursor: pointer;
 }
 </style>

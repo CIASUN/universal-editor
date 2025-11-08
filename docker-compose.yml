@@ -7,11 +7,12 @@ services:
     command: ["dotnet", "UEdit.Backend.dll", "--urls=http://0.0.0.0:5000"]
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://backend:5000
     container_name: project-frontend
-    # В образе фронтенда уже есть готовый dist и Nginx, поэтому command не нужен
     ports:
       - "8080:80"
     depends_on:
       - backend
-
