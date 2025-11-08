@@ -1,147 +1,112 @@
 <template>
-  <aside
-    class="sidebar"
-    :style="{ width: sidebarWidth + 'px' }"
-  >
-    <div class="resize-handle" @mousedown.stop.prevent="startResizeHandle"></div>
+  <div class="tree-panel" :style="{ width: menuWidth + 'px' }">
+    <div class="tree-header">
+      <button @click="toggleCollapse">
+        {{ isCollapsed ? '▶' : '◀' }}
+      </button>
+      <span v-if="!isCollapsed">Меню</span>
+    </div>
 
-    <div v-if="!collapsed" class="tree">
-      <h3>Универсальный редактор</h3>
-
-      <div v-if="loading" class="loading">Загрузка...</div>
-      <div v-else-if="error" class="error">Ошибка: {{ error }}</div>
-      <ul v-else>
-        <li
-          v-for="item in items"
-          :key="item.key"
-          @click="$emit('select', item.key)"
-        >
-          <span class="dot"></span>{{ item.title }}
+    <div class="tree-content" v-if="!isCollapsed">
+      <ul>
+        <li v-for="item in menu" :key="item.id">
+          {{ item.title }}
+          <ul v-if="item.children && item.children.length">
+            <li v-for="child in item.children" :key="child.id">
+              {{ child.title }}
+            </li>
+          </ul>
         </li>
       </ul>
     </div>
 
-    <div v-else class="collapsed-label" @click="toggleCollapsed">
-      ▶
-    </div>
-
-    <button class="collapse-btn" @click="toggleCollapsed">
-      {{ collapsed ? '⯈' : '⯇' }}
-    </button>
-  </aside>
+    <div class="resizer" @mousedown="startResize"></div>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted } from 'vue';
 
-const collapsed = ref(false);
-const sidebarWidth = ref(250);
-const minWidth = 60;
-const maxWidth = 400;
-const items = ref([]);
-const loading = ref(true);
-const error = ref("");
+const menuWidth = ref(200); // начальная ширина
+const isCollapsed = ref(false);
+const menu = ref([]);
 
-function toggleCollapsed() {
-  collapsed.value = !collapsed.value;
-  sidebarWidth.value = collapsed.value ? minWidth : 250;
-}
-
-// --- Resize logic ---
-let isResizing = false;
-function startResizeHandle(e) {
-  isResizing = true;
-  document.addEventListener("mousemove", onResize);
-  document.addEventListener("mouseup", stopResize);
-}
-
-function onResize(e) {
-  if (!isResizing || collapsed.value) return;
-  const newWidth = e.clientX;
-  if (newWidth > minWidth && newWidth < maxWidth) {
-    sidebarWidth.value = newWidth;
+const toggleCollapse = () => {
+  isCollapsed.value = !isCollapsed.value;
+  if (isCollapsed.value) {
+    menuWidth.value = 30; // минимальная ширина при схлопывании
+  } else {
+    menuWidth.value = 200; // восстанавливаем ширину
   }
-}
+};
 
-function stopResize() {
-  isResizing = false;
-  document.removeEventListener("mousemove", onResize);
-  document.removeEventListener("mouseup", stopResize);
-}
-onBeforeUnmount(stopResize);
+const startResize = (e) => {
+  if (isCollapsed.value) return;
 
-// --- Fetch menu data ---
-async function fetchMenu() {
-  loading.value = true;
-  error.value = "";
+  const startX = e.clientX;
+  const startWidth = menuWidth.value;
+
+  const onMouseMove = (e) => {
+    const newWidth = startWidth + (e.clientX - startX);
+    menuWidth.value = Math.max(100, newWidth); // минимальная ширина 100px
+  };
+
+  const onMouseUp = () => {
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
+  };
+
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mouseup', onMouseUp);
+};
+
+onMounted(async () => {
   try {
     const apiUrl = import.meta.env.VITE_API_URL;
-    const response = await fetch(`${apiUrl}/api/menu`);
-
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    items.value = data;
+    const res = await fetch(`${apiUrl}/api/menu`);
+    menu.value = await res.json();
   } catch (err) {
-    console.error(err);
-    error.value = err.message;
-  } finally {
-    loading.value = false;
+    console.error('Ошибка загрузки меню:', err);
   }
-}
-
-onMounted(fetchMenu);
+});
 </script>
 
 <style scoped>
-.sidebar {
+.tree-panel {
+  position: relative;
+  background: #f5f5f5;
+  border-right: 1px solid #ccc;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  position: relative;
-  border-right: 1px solid #ccc;
-  background: #f7f7f7;
-  overflow: hidden;
-  transition: width 0.2s ease;
+  transition: width 0.2s;
 }
 
-.tree {
+.tree-header {
+  display: flex;
+  align-items: center;
+  padding: 5px;
+  background: #ddd;
+  font-weight: bold;
+}
+
+.tree-header button {
+  margin-right: 5px;
+}
+
+.tree-content {
   flex: 1;
-  overflow-y: auto;
-  padding: 8px;
+  overflow: auto;
+  padding: 5px;
 }
 
-.resize-handle {
+.resizer {
+  width: 5px;
+  cursor: ew-resize;
+  background: transparent;
   position: absolute;
   top: 0;
   right: 0;
-  width: 4px;
-  cursor: ew-resize;
-  height: 100%;
-  background: transparent;
-}
-
-.collapse-btn {
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  border: none;
-  background: #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  width: 24px;
-  height: 24px;
-}
-
-.loading,
-.error {
-  padding: 8px;
-  color: #666;
-}
-
-.collapsed-label {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex: 1;
-  cursor: pointer;
+  bottom: 0;
 }
 </style>
