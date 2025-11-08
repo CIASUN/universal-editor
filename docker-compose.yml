@@ -10,7 +10,7 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_URL: http://backend:5000
+        VITE_API_URL: http://localhost:5000
     container_name: project-frontend
     ports:
       - "8080:80"
