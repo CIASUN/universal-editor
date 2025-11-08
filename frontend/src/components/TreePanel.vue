@@ -1,112 +1,109 @@
 <template>
-  <div class="tree-panel" :style="{ width: menuWidth + 'px' }">
-    <div class="tree-header">
-      <button @click="toggleCollapse">
-        {{ isCollapsed ? '▶' : '◀' }}
-      </button>
-      <span v-if="!isCollapsed">Меню</span>
-    </div>
-
-    <div class="tree-content" v-if="!isCollapsed">
+  <aside class="sidebar">
+    <div class="tree">
+      <h3>Универсальный редактор</h3>
       <ul>
-        <li v-for="item in menu" :key="item.id">
-          {{ item.title }}
-          <ul v-if="item.children && item.children.length">
-            <li v-for="child in item.children" :key="child.id">
-              {{ child.title }}
-            </li>
-          </ul>
+        <li v-for="item in items" :key="item.key" @click="$emit('select', item.key)">
+          <span class="dot"></span>{{ item.title }}
         </li>
       </ul>
     </div>
-
-    <div class="resizer" @mousedown="startResize"></div>
-  </div>
+  </aside>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from "vue";
 
-const menuWidth = ref(200); // начальная ширина
-const isCollapsed = ref(false);
-const menu = ref([]);
+const collapsed = ref(false);
+const sidebarWidth = ref(250);
+const minWidth = 60;
+const maxWidth = 400;
+const items = ref([]);
+const loading = ref(true);
+const error = ref("");
 
-const toggleCollapse = () => {
-  isCollapsed.value = !isCollapsed.value;
-  if (isCollapsed.value) {
-    menuWidth.value = 30; // минимальная ширина при схлопывании
-  } else {
-    menuWidth.value = 200; // восстанавливаем ширину
+function toggleCollapsed() {
+  collapsed.value = !collapsed.value;
+  sidebarWidth.value = collapsed.value ? minWidth : 250;
+}
+
+// --- Resize logic ---
+let isResizing = false;
+function startResizeHandle(e) {
+  isResizing = true;
+  document.addEventListener("mousemove", onResize);
+  document.addEventListener("mouseup", stopResize);
+}
+
+function onResize(e) {
+  if (!isResizing || collapsed.value) return;
+  const newWidth = e.clientX;
+  if (newWidth > minWidth && newWidth < maxWidth) {
+    sidebarWidth.value = newWidth;
   }
-};
+}
 
-const startResize = (e) => {
-  if (isCollapsed.value) return;
+function stopResize() {
+  isResizing = false;
+  document.removeEventListener("mousemove", onResize);
+  document.removeEventListener("mouseup", stopResize);
+}
+onBeforeUnmount(stopResize);
 
-  const startX = e.clientX;
-  const startWidth = menuWidth.value;
-
-  const onMouseMove = (e) => {
-    const newWidth = startWidth + (e.clientX - startX);
-    menuWidth.value = Math.max(100, newWidth); // минимальная ширина 100px
-  };
-
-  const onMouseUp = () => {
-    window.removeEventListener('mousemove', onMouseMove);
-    window.removeEventListener('mouseup', onMouseUp);
-  };
-
-  window.addEventListener('mousemove', onMouseMove);
-  window.addEventListener('mouseup', onMouseUp);
-};
-
-onMounted(async () => {
+// --- Fetch menu data ---
+async function fetchMenu() {
+  loading.value = true;
+  error.value = "";
   try {
     const apiUrl = import.meta.env.VITE_API_URL;
-    const res = await fetch(`${apiUrl}/api/menu`);
-    menu.value = await res.json();
+    const response = await fetch(`${apiUrl}/api/menu`);
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    items.value = data;
   } catch (err) {
-    console.error('Ошибка загрузки меню:', err);
+    console.error(err);
+    error.value = err.message;
+  } finally {
+    loading.value = false;
   }
-});
+}
+
+onMounted(fetchMenu);
 </script>
 
 <style scoped>
-.tree-panel {
-  position: relative;
-  background: #f5f5f5;
-  border-right: 1px solid #ccc;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  transition: width 0.2s;
+.sidebar {
+  width: 280px;
+  background: #f6f8fa;
+  border-right: 1px solid #ddd;
+  overflow-y: auto;
 }
 
-.tree-header {
-  display: flex;
-  align-items: center;
-  padding: 5px;
-  background: #ddd;
-  font-weight: bold;
+.tree {
+  padding: 12px;
 }
 
-.tree-header button {
-  margin-right: 5px;
+.tree ul {
+  list-style: none;
+  padding: 0;
 }
 
-.tree-content {
-  flex: 1;
-  overflow: auto;
-  padding: 5px;
+.tree li {
+  cursor: pointer;
+  padding: 6px 8px;
 }
 
-.resizer {
-  width: 5px;
-  cursor: ew-resize;
-  background: transparent;
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
+.tree li:hover {
+  background: #e5e9f0;
+}
+
+.dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #444;
+  border-radius: 50%;
+  margin-right: 6px;
 }
 </style>
