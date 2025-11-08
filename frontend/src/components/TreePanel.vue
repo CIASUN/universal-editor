@@ -1,32 +1,33 @@
 <template>
   <aside
     class="sidebar"
-    :style="{ width: sidebarWidth + 'px' }"
-    @mousemove="onResize"
-    @mouseup="stopResize"
+    :style="{
+      width: collapsed ? '5px' : sidebarWidth + 'px',
+      boxShadow: collapsed ? '1px 0 2px rgba(0,0,0,0.15)' : '2px 0 4px rgba(0,0,0,0.1)',
+    }"
   >
-    <div class="tree" v-if="!collapsed">
+    <!-- Кнопка свернуть/развернуть -->
+    <div
+      class="collapse-handle"
+      :class="{ collapsed }"
+      @click="toggleCollapsed"
+      title="Свернуть / Развернуть меню"
+    >
+      {{ collapsed ? '›' : '‹' }}
+    </div>
+
+    <div v-show="!collapsed" class="tree">
       <h3>Универсальный редактор</h3>
       <ul>
-        <li
-          v-for="item in items"
-          :key="item.key"
-          @click="$emit('select', item.key)"
-        >
+        <li v-for="item in items" :key="item.key" @click="$emit('select', item.key)">
           <span class="dot"></span>{{ item.title }}
         </li>
       </ul>
     </div>
 
-    <!-- Кнопка схлопывания -->
-    <div class="collapse-handle" @click="toggleCollapsed">
-      <span v-if="collapsed">›</span>
-      <span v-else>‹</span>
-    </div>
-
-    <!-- Разделитель для изменения ширины -->
+    <!-- Разделительная зона для изменения ширины -->
     <div
-      v-if="!collapsed"
+      v-show="!collapsed"
       class="resizer"
       @mousedown="startResizeHandle"
     ></div>
@@ -36,26 +37,22 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from "vue";
 
-const props = defineProps({
-  items: { type: Array, default: () => [] }
-});
-
 const collapsed = ref(false);
 const sidebarWidth = ref(250);
-const minWidth = 60;
+const minWidth = 80;
 const maxWidth = 400;
+const items = ref([]);
+const loading = ref(true);
+const error = ref("");
 
 function toggleCollapsed() {
   collapsed.value = !collapsed.value;
-  sidebarWidth.value = collapsed.value ? minWidth : 250;
 }
 
 // --- Resize logic ---
 let isResizing = false;
-function startResizeHandle(e) {
-  if (collapsed.value) return;
+function startResizeHandle() {
   isResizing = true;
-  document.body.style.cursor = "col-resize";
   document.addEventListener("mousemove", onResize);
   document.addEventListener("mouseup", stopResize);
 }
@@ -69,86 +66,63 @@ function onResize(e) {
 }
 
 function stopResize() {
-  if (isResizing) {
-    isResizing = false;
-    document.body.style.cursor = "default";
-    document.removeEventListener("mousemove", onResize);
-    document.removeEventListener("mouseup", stopResize);
+  isResizing = false;
+  document.removeEventListener("mousemove", onResize);
+  document.removeEventListener("mouseup", stopResize);
+}
+onBeforeUnmount(stopResize);
+
+// --- Fetch menu data ---
+async function fetchMenu() {
+  loading.value = true;
+  error.value = "";
+  try {
+    const response = await fetch("http://localhost:5000/api/menu");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    items.value = await response.json();
+  } catch (err) {
+    console.error(err);
+    error.value = err.message;
+  } finally {
+    loading.value = false;
   }
 }
 
-onBeforeUnmount(stopResize);
+onMounted(fetchMenu);
 </script>
 
 <style scoped>
 .sidebar {
-  display: flex;
-  flex-direction: column;
   position: relative;
   background: #f6f8fa;
   border-right: 1px solid #ddd;
-  height: 100%;
-  transition: width 0.25s ease;
   overflow: hidden;
+  transition: width 0.25s ease;
 }
 
-/* Кнопка схлопывания */
-.collapse-handle {
-  position: absolute;
-  top: 50%;
-  right: -8px;
-  transform: translateY(-50%);
-  background: #ddd;
-  width: 16px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  border-radius: 4px;
-  user-select: none;
-  font-size: 16px;
-  color: #333;
-  z-index: 10;
-}
-.collapse-handle:hover {
-  background: #ccc;
-}
-
-/* Ручка изменения ширины */
-.resizer {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 4px;
-  height: 100%;
-  cursor: col-resize;
-  background-color: transparent;
-}
-.resizer:hover {
-  background-color: #bbb;
-}
-
-/* Стили списка */
 .tree {
   padding: 12px;
+  height: 100%;
+  overflow-y: auto;
 }
+
 .tree ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
+
 .tree li {
   cursor: pointer;
   padding: 6px 8px;
   border-radius: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  transition: background 0.15s;
 }
+
 .tree li:hover {
-  background: #e5e9f0;
+  background: #e8ecf3;
 }
+
 .dot {
   display: inline-block;
   width: 6px;
@@ -156,5 +130,42 @@ onBeforeUnmount(stopResize);
   background: #444;
   border-radius: 50%;
   margin-right: 6px;
+}
+
+/* Кнопка свернуть/развернуть */
+.collapse-handle {
+  position: absolute;
+  top: 50%;
+  right: -10px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 40px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
+  font-weight: bold;
+  color: #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 1px 0 2px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  transition: background 0.2s;
+}
+
+.collapse-handle:hover {
+  background: #f0f0f0;
+}
+
+.resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: ew-resize;
+  background: transparent;
 }
 </style>
