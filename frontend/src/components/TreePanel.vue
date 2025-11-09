@@ -19,9 +19,13 @@
     <div v-show="!collapsed" class="tree">
       <h3>Универсальный редактор</h3>
       <ul>
-        <li v-for="item in items" :key="item.key" @click="$emit('select', item.key)">
-          <span class="dot"></span>{{ item.title }}
-        </li>
+        <li
+		  v-for="item in items"
+		  :key="item.key"
+		  @click="$emit('select', item)"
+		>
+		  <span class="dot"></span>{{ item.title }}
+		</li>
       </ul>
     </div>
 

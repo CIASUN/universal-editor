@@ -12,12 +12,14 @@
     />
 
     <div class="main">
-      <!-- передаём список меню в TreePanel -->
       <TreePanel :items="menuItems" @select="onSelect" />
 
       <section class="content">
         <h2 style="margin:0 0 8px">{{ currentTitle }}</h2>
-        <p style="color:var(--muted)">Здесь будет содержимое выбранного раздела.</p>
+        <p style="color:var(--muted)">
+          Здесь будет содержимое выбранного раздела.<br />
+          <small v-if="selectedItem.className">Компонент: {{ selectedItem.className }}</small>
+        </p>
       </section>
     </div>
   </div>
@@ -30,7 +32,7 @@ import TreePanel from './components/TreePanel.vue';
 
 const date = ref(new Date().toISOString().slice(0,10));
 const status = ref({ npz: '07:05:14', dob: '06:12:25', nad: '-' });
-const selectedKey = ref('');
+const selectedItem = ref({ key: '', title: '', className: '' });
 const menuItems = ref([]); // список меню с бэкенда
 
 onMounted(async () => {
@@ -44,12 +46,11 @@ onMounted(async () => {
 });
 
 const currentTitle = computed(() => {
-  const found = menuItems.value.find(i => i.key === selectedKey.value);
-  return found ? found.title : 'Выберите пункт слева';
+  return selectedItem.value?.title || 'Выберите пункт слева';
 });
 
 function setDate(d) { date.value = d; }
-function onSelect(key) { selectedKey.value = key; }
+function onSelect(item) { selectedItem.value = item; }
 function onRefresh() { console.log('refresh'); }
 function onSave() { console.log('save'); }
 function onExport() { console.log('export to excel'); }
