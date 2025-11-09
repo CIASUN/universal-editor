@@ -2,9 +2,12 @@
   <div class="sublist">
     <h3>Раздел</h3>
     <ul>
-      <li v-for="item in items"
-          :key="item.id"
-          @click="$emit('select', item.id)">
+      <li
+        v-for="item in items"
+        :key="item.id"
+        :class="{ active: item.id === selectedId }"
+        @click="$emit('select', item.id)"
+      >
         {{ item.name }}
       </li>
     </ul>
@@ -12,38 +15,43 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 
 const props = defineProps({
-  menuKey: { type: String, required: true }
+  menuKey: String,
+  selectedId: Number
 });
-const emit = defineEmits(['select']);
 
 const items = ref([]);
-const loading = ref(false);
-const error = ref('');
 
-watch(() => props.menuKey, async (newKey) => {
-  if (!newKey) return;
-  loading.value = true;
-  error.value = '';
+async function loadData() {
+  if (!props.menuKey) return;
   try {
-    const res = await fetch(`http://localhost:5000/api/menu/items/${newKey}`);
+    const res = await fetch(`http://localhost:5000/api/menu/items/${props.menuKey}`);
     if (!res.ok) throw new Error('Ошибка загрузки списка');
     items.value = await res.json();
   } catch (e) {
-    error.value = e.message;
-  } finally {
-    loading.value = false;
+    console.error(e);
+    items.value = [];
   }
-});
+}
+
+onMounted(loadData);
+
+watch(() => props.menuKey, loadData);
 </script>
 
 <style scoped>
 .sublist {
-  width: 220px;
+  width: 200px;
   border-right: 1px solid #ccc;
   padding: 8px;
+  overflow-y: auto;
+}
+
+.sublist h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
 }
 
 ul {
@@ -53,11 +61,16 @@ ul {
 }
 
 li {
+  padding: 4px 6px;
   cursor: pointer;
-  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 li:hover {
-  background: #e8f0ff;
+  background: #eee;
+}
+
+li.active {
+  background: #cde4ff;
 }
 </style>
