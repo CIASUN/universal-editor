@@ -15,11 +15,28 @@
       <TreePanel :items="menuItems" @select="onSelect" />
 
       <section class="content">
-        <h2 style="margin:0 0 8px">{{ currentTitle }}</h2>
-        <p style="color:var(--muted)">
-          Здесь будет содержимое выбранного раздела.<br />
-          <small v-if="selectedItem.className">Компонент: {{ selectedItem.className }}</small>
-        </p>
+        <!-- Если выбран ctrlProd_UEdt_ValueEditor -->
+        <template v-if="selectedItem.className === 'ctrlProd_UEdt_ValueEditor'">
+          <div class="twoframe">
+            <MenuSubList :menuKey="selectedItem.key" @select="onSubSelect" />
+            <MenuSubDetails
+              :menuKey="selectedItem.key"
+              :selectedId="selectedSubId"
+              :date="date"
+            />
+          </div>
+        </template>
+
+        <!-- Для остальных пунктов -->
+        <template v-else>
+          <h2 style="margin:0 0 8px">{{ currentTitle }}</h2>
+          <p style="color:var(--muted)">
+            Здесь будет содержимое выбранного раздела.<br />
+            <small v-if="selectedItem.className">
+              Компонент: {{ selectedItem.className }}
+            </small>
+          </p>
+        </template>
       </section>
     </div>
   </div>
@@ -29,11 +46,14 @@
 import { ref, computed, onMounted } from 'vue';
 import TopBar from './components/TopBar.vue';
 import TreePanel from './components/TreePanel.vue';
+import MenuSubList from './components/MenuSubList.vue';
+import MenuSubDetails from './components/MenuSubDetails.vue';
 
 const date = ref(new Date().toISOString().slice(0,10));
 const status = ref({ npz: '07:05:14', dob: '06:12:25', nad: '-' });
+const menuItems = ref([]);
 const selectedItem = ref({ key: '', title: '', className: '' });
-const menuItems = ref([]); // список меню с бэкенда
+const selectedSubId = ref(null);
 
 onMounted(async () => {
   try {
@@ -45,17 +65,28 @@ onMounted(async () => {
   }
 });
 
-const currentTitle = computed(() => {
-  return selectedItem.value?.title || 'Выберите пункт слева';
-});
+function setDate(d) {
+  date.value = d;
+}
 
-function setDate(d) { date.value = d; }
-function onSelect(item) { selectedItem.value = item; }
+function onSelect(item) {
+  selectedItem.value = item;
+  selectedSubId.value = null; // сброс выбора при переходе в другой раздел
+}
+
+function onSubSelect(id) {
+  selectedSubId.value = id;
+}
+
 function onRefresh() { console.log('refresh'); }
 function onSave() { console.log('save'); }
-function onExport() { console.log('export to excel'); }
+function onExport() { console.log('export'); }
 function onSettings() { console.log('settings'); }
 function onHelp() { console.log('help'); }
+
+const currentTitle = computed(() =>
+  selectedItem.value?.title || 'Выберите пункт слева'
+);
 </script>
 
 <style scoped>
@@ -75,5 +106,10 @@ function onHelp() { console.log('help'); }
   flex: 1;
   padding: 16px;
   overflow-y: auto;
+}
+
+.twoframe {
+  display: flex;
+  height: 100%;
 }
 </style>

@@ -26,4 +26,46 @@ public class MenuController : ControllerBase
 
         return Ok(menu);
     }
+
+    [HttpGet("items/{key}")]
+    public IActionResult GetMenuItems(string key)
+    {
+        var items = Enumerable.Range(1, 8)
+            .Select(i => new { id = i, name = $"{key} item {i}" })
+            .ToList();
+
+        return Ok(items);
+    }
+
+
+    [HttpGet("itemdetails/{key}/{id}")]
+    public IActionResult GetMenuItemDetails(string key, int id)
+    {
+        var random = new Random();
+        var cityNames = new[]
+        {
+        "Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург", "Казань",
+        "Нижний Новгород", "Челябинск", "Самара", "Ростов-на-Дону", "Уфа"
+    };
+
+        var city = cityNames.ElementAtOrDefault((id - 1) % cityNames.Length) ?? "Неизвестный город";
+
+        var details = Enumerable.Range(1, 10).Select(i => new
+        {
+            doName = $"{city} - Показатель {i}",
+            value = Math.Round(random.NextDouble() * 100000, 2)
+        });
+
+        return Ok(new
+        {
+            key,
+            id,
+            city,
+            date = DateTime.Now.ToString("dd.MM.yyyy"),
+            details
+        });
+    }
+
 }
+
+
