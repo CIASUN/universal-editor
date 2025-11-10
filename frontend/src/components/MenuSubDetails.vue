@@ -1,20 +1,22 @@
 <template>
   <div class="subdetails">
     <div class="header">
-      <strong>Дата: {{ date }}</strong>
+      <strong>{{ formattedMonthYear }}</strong>
     </div>
 
     <table v-if="rows.length">
       <thead>
         <tr>
           <th>ДО</th>
-          <th>Значение</th>
+          <th style="text-align:right">Значение</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="r in rows" :key="r.doName">
           <td>{{ r.doName }}</td>
-          <td style="text-align:right">{{ r.value.toLocaleString('ru-RU', { minimumFractionDigits: 2 }) }}</td>
+          <td style="text-align:right">
+            {{ r.value.toLocaleString('ru-RU', { minimumFractionDigits: 2 }) }}
+          </td>
         </tr>
       </tbody>
     </table>
@@ -24,15 +26,25 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 
 const props = defineProps({
   menuKey: { type: String, required: true },
-  selectedId: { type: Number, default: null }
+  selectedId: { type: Number, default: null },
+  selectedMonth: { type: String, default: '' } // формат YYYY-MM
 });
+
 const rows = ref([]);
 const date = ref('');
 const loading = ref(false);
+
+const formattedMonthYear = computed(() => {
+  if (!props.selectedMonth) return '';
+  const [year, month] = props.selectedMonth.split('-');
+  const dateObj = new Date(year, month - 1);
+  const monthName = dateObj.toLocaleString('ru-RU', { month: 'long' });
+  return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`;
+});
 
 watch(() => props.selectedId, async (newId) => {
   if (!newId) return;
@@ -59,6 +71,7 @@ watch(() => props.selectedId, async (newId) => {
 }
 .header {
   margin-bottom: 12px;
+  font-size: 16px;
 }
 table {
   width: 100%;

@@ -22,7 +22,7 @@
             <MenuSubDetails
               :menuKey="selectedItem.key"
               :selectedId="selectedSubId"
-              :date="date"
+              :selectedMonth="date"
             />
           </div>
         </template>
@@ -49,7 +49,12 @@ import TreePanel from './components/TreePanel.vue';
 import MenuSubList from './components/MenuSubList.vue';
 import MenuSubDetails from './components/MenuSubDetails.vue';
 
-const date = ref(new Date().toISOString().slice(0,10));
+// --- текущее значение месяца в формате YYYY-MM ---
+const now = new Date();
+const year = now.getFullYear();
+const month = String(now.getMonth() + 1).padStart(2, '0');
+const date = ref(`${year}-${month}`);
+
 const status = ref({ npz: '07:05:14', dob: '06:12:25', nad: '-' });
 const menuItems = ref([]);
 const selectedItem = ref({ key: '', title: '', className: '' });
