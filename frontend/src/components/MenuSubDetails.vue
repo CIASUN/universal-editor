@@ -35,7 +35,6 @@ const props = defineProps({
 });
 
 const rows = ref([]);
-const date = ref('');
 const loading = ref(false);
 
 const formattedMonthYear = computed(() => {
@@ -46,21 +45,26 @@ const formattedMonthYear = computed(() => {
   return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`;
 });
 
-watch(() => props.selectedId, async (newId) => {
-  if (!newId) return;
+async function loadDetails() {
+  if (!props.menuKey || !props.selectedId || !props.selectedMonth) return;
   loading.value = true;
   try {
-    const res = await fetch(`http://localhost:5000/api/menu/itemdetails/${props.menuKey}/${newId}`);
+    const res = await fetch(
+      `http://localhost:5000/api/menu/itemdetails/${props.menuKey}/${props.selectedId}?date=${props.selectedMonth}-01`
+      // 👆 добавляем параметр date (преобразуем YYYY-MM → YYYY-MM-01)
+    );
     if (!res.ok) throw new Error('Ошибка загрузки деталей');
     const data = await res.json();
-    date.value = data.date;
     rows.value = data.details;
   } catch (e) {
     console.error(e);
   } finally {
     loading.value = false;
   }
-});
+}
+
+// Следим за изменением пункта меню или месяца
+watch(() => [props.selectedId, props.selectedMonth], loadDetails);
 </script>
 
 <style scoped>
